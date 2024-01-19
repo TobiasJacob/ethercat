@@ -16,7 +16,7 @@
 *******************************************************************************/
 
 /*****************************************************************************
- Copyright (C) 2021 Microchip Technology Inc. and its subsidiaries.
+ Copyright (C) 2022 Microchip Technology Inc. and its subsidiaries.
 
 Microchip Technology Inc. and its subsidiaries.
 
@@ -431,7 +431,7 @@ void Emulation_Init()
    pAPPL_EEPROM_Write  = HW_EepromWrite;
 }
 #else
-UINT16 HW_EepromReload(void)
+UINT16 HW_EepromReload ()
 {
     return 0;
 }
@@ -490,8 +490,8 @@ UINT16 APPL_StopMailboxHandler(void)
 /////////////////////////////////////////////////////////////////////////////////////////
 /**
  \param    pIntMask    pointer to the AL Event Mask which will be written to the AL event Mask
-                       register (0x204) when this function is succeeded. The event mask can be adapted
-                       in this function
+                        register (0x204) when this function is succeeded. The event mask can be adapted
+                        in this function
  \return    AL Status Code (see ecatslv.h ALSTATUSCODE_....)
 
  \brief    The function is called in the state transition from PREOP to SAFEOP when
@@ -580,7 +580,6 @@ UINT16 APPL_GenerateMapping(UINT16 *pInputSize,UINT16 *pOutputSize)
     UINT32 *pPDOEntry = NULL;
     UINT16 PDOEntryCnt = 0;
    
-#if MAX_PD_OUTPUT_SIZE > 0
     /*Scan object 0x1C12 RXPDO assign*/
     for(PDOAssignEntryCnt = 0; PDOAssignEntryCnt < sRxPDOassign.u16SubIndex0; PDOAssignEntryCnt++)
     {
@@ -590,7 +589,7 @@ UINT16 APPL_GenerateMapping(UINT16 *pInputSize,UINT16 *pOutputSize)
             PDOSubindex0 = *((UINT16 *)pPDO->pVarPtr);
             for(PDOEntryCnt = 0; PDOEntryCnt < PDOSubindex0; PDOEntryCnt++)
             {
-                pPDOEntry = (UINT32 *)(((UINT16 *)pPDO->pVarPtr) + (OBJ_GetEntryOffset((PDOEntryCnt+1),pPDO)>>4));    //goto PDO entry
+                pPDOEntry = (UINT32 *)((UINT16 *)pPDO->pVarPtr + (OBJ_GetEntryOffset((PDOEntryCnt+1),pPDO)>>3)/2);    //goto PDO entry
                 // we increment the expected output size depending on the mapped Entry
                 OutputSize += (UINT16) ((*pPDOEntry) & 0xFF);
             }
@@ -605,9 +604,7 @@ UINT16 APPL_GenerateMapping(UINT16 *pInputSize,UINT16 *pOutputSize)
     }
 
     OutputSize = (OutputSize + 7) >> 3;
-#endif
 
-#if MAX_PD_INPUT_SIZE > 0
     if(result == 0)
     {
         /*Scan Object 0x1C13 TXPDO assign*/
@@ -619,7 +616,7 @@ UINT16 APPL_GenerateMapping(UINT16 *pInputSize,UINT16 *pOutputSize)
                 PDOSubindex0 = *((UINT16 *)pPDO->pVarPtr);
                 for(PDOEntryCnt = 0; PDOEntryCnt < PDOSubindex0; PDOEntryCnt++)
                 {
-                    pPDOEntry = (UINT32 *)(((UINT16 *)pPDO->pVarPtr) + (OBJ_GetEntryOffset((PDOEntryCnt+1),pPDO)>>4));    //goto PDO entry
+                    pPDOEntry = (UINT32 *)((UINT16 *)pPDO->pVarPtr + (OBJ_GetEntryOffset((PDOEntryCnt+1),pPDO)>>3)/2);    //goto PDO entry
                     // we increment the expected output size depending on the mapped Entry
                     InputSize += (UINT16) ((*pPDOEntry) & 0xFF);
                 }
@@ -634,7 +631,6 @@ UINT16 APPL_GenerateMapping(UINT16 *pInputSize,UINT16 *pOutputSize)
         }
     }
     InputSize = (InputSize + 7) >> 3;
-#endif
 
 #else
 #if _WIN32
@@ -702,7 +698,7 @@ void APPL_Application(void)
 /**
  \return    The Explicit Device ID of the EtherCAT slave
 
- \brief     Read the Explicit Device ID (from an external ID switch)
+ \brief     Calculate the Explicit Device ID
 *////////////////////////////////////////////////////////////////////////////////////////
 UINT16 APPL_GetDeviceID()
 {
@@ -725,23 +721,14 @@ UINT16 APPL_GetDeviceID()
  \brief    This is the main function
 
 *////////////////////////////////////////////////////////////////////////////////////////
-#if _PIC24 && EL9800_HW
+#if _PIC24
 int main(void)
-#elif _WIN32
-int main(int argc, char* argv[])
 #else
 void main(void)
 #endif
 {
     /* initialize the Hardware and the EtherCAT Slave Controller */
 #if FC1100_HW
-#if _WIN32
-    u16FcInstance = 0;
-    if (argc > 1)
-    {
-        u16FcInstance = atoi(argv[1]);
-    }
-#endif
     if(HW_Init())
     {
         HW_Release();
